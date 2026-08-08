@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Desk — Exam Tracker</title>
+    <style>
+        /* ----------------------------------------------
+           Design Tokens & Reset
+        ------------------------------------------------ */
+        :root {
+            --paper: #EEF1F0;
+            --paper-raised: #FBFAF6;
+            --ink: #1B2A4A;
+            --ink-soft: #4A5568;
+            --line: #C7C2AE;
+            --stamp: #B33A3A;
+            --stamp-soft: #F3DEDA;
+            --seal-green: #3F7554;
+            --seal-green-soft: #DCEAE1;
+            --amber: #9C6B14;
+            --amber-soft: #F3E7CE;
+            --shadow: 0 1px 0 rgba(27,42,74,0.06), 0 8px 20px -12px rgba(27,42,74,0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background:
+                radial-gradient(circle at 1px 1px, rgba(27,42,74,0.05) 1px, transparent 0) 0 0 / 22px 22px,
+                var(--paper);
+            color: var(--ink);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            padding-bottom: 80px;
+            line-height: 1.5;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Lora', 'Georgia', serif;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            letter-spacing: 0.02em;
+        }
+
+        /* ----------------------------------------------
+           Hero
+        ------------------------------------------------ */
+        header.hero {
+            background: var(--ink);
+            color: var(--paper-raised);
+            padding: 36px 24px 44px;
+            position: relative;
+            overflow: hidden;
+        }
+        header.hero::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 2px, transparent 2px 14px);
+            pointer-events: none;
+        }
+        .hero-inner {
+            max-width: 980px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+            position: relative;
+        }
+        .hero-title .eyebrow {
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.18em;
+            color: #B9C2D6;
+            margin-bottom: 8px;
+        }
+        .hero-title h1 {
+            font-size: 34px;
+            line-height: 1.1;
+        }
+        .hero-title p {
+            margin: 8px 0 0;
+            color: #C7CFE0;
+            font-size: 14px;
+            max-width: 38ch;
+        }
+        .ledger-card {
+            background: var(--paper-raised);
+            color: var(--ink);
+            border-radius: 6px;
+            padding: 16px 22px;
+            box-shadow: var(--shadow);
+            min-width: 200px;
+            border: 1px solid rgba(27,42,74,0.08);
+        }
+        .ledger-card .label {
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            color: var(--ink-soft);
+        }
+        .ledger-card .amount {
+            font-family: 'Lora', serif;
+            font-size: 30px;
+            margin-top: 4px;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+        .ledger-card .amount .sub {
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            color: var(--ink-soft);
+            font-weight: 600;
+        }
+
+        /* ----------------------------------------------
+           Main layout
+        ------------------------------------------------ */
+        main {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ----------------------------------------------
+           Panels
+        ------------------------------------------------ */
+        .panel {
+            background: var(--paper-raised);
+            border: 1px solid rgba(27,42,74,0.08);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-top: -24px;
+            position: relative;
+            z-index: 2;
+            transition: opacity 0.2s;
+        }
+        .panel.hidden {
+            display: none;
+        }
+        .panel h2 {
+            font-size: 19px;
+            margin-bottom: 4px;
+        }
+        .panel .hint {
+            font-size: 12.5px;
+            color: var(--ink-soft);
+            margin-bottom: 18px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .field label {
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--ink-soft);
+            font-weight: 600;
+        }
+        .field input[type="text"],
+        .field input[type="date"],
+        .field input[type="number"] {
+            font: inherit;
+            font-size: 14px;
+            padding: 10px 11px;
+            border: 1px solid var(--line);
+            border-radius: 5px;
+            background: #fff;
+            color: var(--ink);
+        }
+        .field input:focus {
+            outline: 2px solid var(--ink);
+            outline-offset: 1px;
+        }
+        .field input:disabled {
+            background: #f0f0f0;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .file-drop {
+            border: 1.5px dashed var(--line);
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 13px;
+            color: var(--ink-soft);
+            background: #fdfdfb;
+            cursor: pointer;
+            text-align: center;
+            transition: 0.1s;
+        }
+        .file-drop:hover {
+            border-color: var(--ink);
+            color: var(--ink);
+        }
+        .file-drop input {
+            display: none;
+        }
+        .file-drop.has-file {
+            border-style: solid;
+            border-color: var(--seal-green);
+            color: var(--seal-green);
+            background: var(--seal-green-soft);
+        }
+        .file-drop.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            border-style: solid;
+            border-color: #ccc;
+        }
+
+        .btn {
+            font: inherit;
+            font-weight: 700;
+            font-size: 13.5px;
+            letter-spacing: 0.02em;
+            padding: 11px 20px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: transform .08s ease;
+        }
+        .btn:active {
+            transform: scale(0.97);
+        }
+        .btn-primary {
+            background: var(--ink);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #28345c;
+        }
+        .btn-ghost {
+            background: transparent;
+            color: var(--ink-soft);
+            border: 1px solid var(--line);
+        }
+        .btn-ghost:hover {
+            color: var(--ink);
+            border-color: var(--ink);
+        }
+        .btn-edit {
+            background: var(--amber);
+            color: #fff;
+        }
+        .btn-edit:hover {
+            background: #7a5510;
+        }
+        .btn-stamp {
+            background: var(--stamp);
+            color: #fff;
+        }
+        .btn-danger {
+            background: transparent;
+            color: var(--stamp);
+            border: 1px solid var(--stamp-soft);
+        }
+        .btn-danger:hover {
+            background: var(--stamp-soft);
+        }
+        .btn-cancel {
+            background: transparent;
+            color: var(--ink-soft);
+            border: 1px solid var(--line);
+        }
+        .btn-cancel:hover {
+            background: #f0f0f0;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        /* ----------------------------------------------
+           Toolbar
+        ------------------------------------------------ */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin: 28px 0 16px;
+        }
+        .toolbar input[type="text"] {
+            flex: 1;
+            min-width: 160px;
+            font: inherit;
+            font-size: 14px;
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            background: #fff;
+        }
+        .toolbar select {
+            font: inherit;
+            font-size: 13px;
+            padding: 9px 12px;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            background: #fff;
+            color: var(--ink);
+        }
+        .toolbar .count {
+            font-size: 12.5px;
+            color: var(--ink-soft);
+            margin-left: auto;
+        }
+
+        /* ----------------------------------------------
+           Ticket / admit-card style entries
+        ------------------------------------------------ */
+        .ticket-list {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .ticket {
+            background: var(--paper-raised);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            overflow: hidden;
+            transition: opacity 0.2s;
+        }
+        .ticket.editing {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .ticket-main {
+            padding: 20px 22px;
+            border-right: 1.5px dashed var(--line);
+            position: relative;
+        }
+        .ticket-main::before,
+        .ticket-main::after {
+            content: "";
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: var(--paper);
+            border-radius: 50%;
+            right: -8px;
+        }
+        .ticket-main::before {
+            top: -8px;
+        }
+        .ticket-main::after {
+            bottom: -8px;
+        }
+
+        .ticket-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .ticket-top h3 {
+            font-size: 18px;
+            color: var(--ink);
+        }
+        .status-badge {
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 4px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .status-applied {
+            background: var(--amber-soft);
+            color: var(--amber);
+        }
+        .status-admit {
+            background: var(--seal-green-soft);
+            color: var(--seal-green);
+        }
+
+        .ticket-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px 20px;
+            margin-top: 14px;
+        }
+        .ticket-meta .m-label {
+            font-size: 10.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--ink-soft);
+        }
+        .ticket-meta .m-value {
+            font-size: 14px;
+            margin-top: 2px;
+        }
+
+        .ticket-files {
+            margin-top: 14px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .file-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            padding: 6px 10px;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            color: var(--ink-soft);
+            text-decoration: none;
+            background: #fff;
+            max-width: 100%;
+        }
+        .file-chip:hover {
+            border-color: var(--ink);
+            color: var(--ink);
+        }
+        .file-chip.locked {
+            opacity: 0.8;
+            cursor: default;
+            border-color: var(--seal-green);
+            background: var(--seal-green-soft);
+        }
+        .file-chip.locked:hover {
+            border-color: var(--seal-green);
+            color: var(--ink-soft);
+        }
+
+        .ticket-side {
+            background: repeating-linear-gradient(135deg, var(--ink) 0 2px, #243a68 2px 4px);
+            width: 96px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 8px;
+        }
+        .ticket-side .fee {
+            color: #fff;
+            text-align: center;
+        }
+        .ticket-side .fee .cur {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+        .ticket-side .fee .num {
+            font-family: 'Lora', serif;
+            font-size: 19px;
+        }
+        .ticket-side .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+        }
+        .icon-btn {
+            background: rgba(255,255,255,0.14);
+            border: none;
+            color: #fff;
+            font-size: 11px;
+            padding: 6px 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.1s;
+        }
+        .icon-btn:hover {
+            background: rgba(255,255,255,0.28);
+        }
+        .icon-btn.remove:hover {
+            background: var(--stamp);
+        }
+        .icon-btn.edit:hover {
+            background: var(--amber);
+        }
+
+        .admit-strip {
+            grid-column: 1 / -1;
+            padding: 14px 22px;
+            border-top: 1px dashed var(--line);
+            background: #fbfaf6;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .admit-strip .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--ink-soft);
+        }
+        .switch {
+            position: relative;
+            width: 38px;
+            height: 21px;
+            flex: none;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .switch .slider {
+            position: absolute;
+            inset: 0;
+            background: var(--line);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: .15s;
+        }
+        .switch .slider::before {
+            content: "";
+            position: absolute;
+            height: 15px;
+            width: 15px;
+            left: 3px;
+            top: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: .15s;
+        }
+        .switch input:checked+.slider {
+            background: var(--seal-green);
+        }
+        .switch input:checked+.slider::before {
+            transform: translateX(17px);
+        }
+        .switch input:disabled+.slider {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .admit-upload {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12.5px;
+            flex-wrap: wrap;
+        }
+        .admit-upload .file-drop {
+            padding: 7px 12px;
+            font-size: 12px;
+        }
+        .locked-note {
+            font-size: 12.5px;
+            color: var(--ink-soft);
+            font-style: italic;
+        }
+        .admit-locked {
+            font-size: 12.5px;
+            color: var(--seal-green);
+            font-weight: 600;
+        }
+        .admit-replace-hint {
+            font-size: 12px;
+            color: var(--ink-soft);
+            font-style: italic;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--ink-soft);
+        }
+        .empty-state .seal {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 2px dashed var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px;
+            font-size: 22px;
+        }
+
+        dialog#toast {
+            position: fixed;
+            bottom: 26px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: none;
+            border-radius: 6px;
+            padding: 12px 20px;
+            background: var(--ink);
+            color: #fff;
+            font-size: 13.5px;
+            box-shadow: var(--shadow);
+        }
+        dialog#toast::backdrop {
+            background: transparent;
+        }
+
+        /* Edit mode styles for admit card fields */
+        .edit-field-group {
+            border: 2px solid var(--amber);
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 4px;
+            background: #fefcf5;
+        }
+        .edit-field-group .field-label {
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--amber);
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        @media (max-width: 650px) {
+            .ticket {
+                grid-template-columns: 1fr;
+            }
+            .ticket-main {
+                border-right: none;
+                border-bottom: 1.5px dashed var(--line);
+            }
+            .ticket-main::before,
+            .ticket-main::after {
+                right: auto;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            .ticket-main::before {
+                top: auto;
+                bottom: -8px;
+            }
+            .ticket-side {
+                width: auto;
+                flex-direction: row;
+                padding: 12px 16px;
+                background: #1f2e50;
+                gap: 20px;
+            }
+            .ticket-side .actions {
+                flex-direction: row;
+                width: auto;
+            }
+            .icon-btn {
+                width: auto;
+                padding: 6px 12px;
+            }
+        }
+        @media (max-width: 480px) {
+            .hero-title h1 {
+                font-size: 26px;
+            }
+            .ledger-card {
+                min-width: 150px;
+                padding: 12px 16px;
+            }
+            .ledger-card .amount {
+                font-size: 24px;
+            }
+            .panel {
+                padding: 18px;
+            }
+            .ticket-main {
+                padding: 16px;
+            }
+            .ticket-meta {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+            .admit-strip {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="hero">
+        <div class="hero-inner">
+            <div class="hero-title">
+                <div class="eyebrow">Application Desk</div>
+                <h1>Exam Tracker</h1>
+                <p>Every application, admit card and rupee in one ledger — kept right here in your browser.</p>
+            </div>
+            <div class="ledger-card">
+                <div class="label">Total Spent on Applications</div>
+                <div class="amount"><span class="mono">₹<span id="totalSpent">0</span></span><span class="sub" id="totalCount">0 exams</span></div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="panel" id="formPanel">
+            <h2 id="formTitle">Log a new application</h2>
+            <div class="hint" id="formHint">Fill this in right after you apply — attach the filled application form so it's never lost.</div>
+            <form id="examForm">
+                <input type="hidden" id="editId" value="">
+                <div class="grid">
+                    <div class="field">
+                        <label for="examName">Exam name</label>
+                        <input type="text" id="examName" placeholder="e.g. SSC CGL 2026" required>
+                    </div>
+                    <div class="field">
+                        <label for="applicationDate">Application date</label>
+                        <input type="date" id="applicationDate" required>
+                    </div>
+                    <div class="field">
+                        <label for="applicationId">Application ID</label>
+                        <input type="text" class="mono" id="applicationId" placeholder="e.g. APP2026118823" required>
+                    </div>
+                    <div class="field">
+                        <label for="registrationNumber">Registration number</label>
+                        <input type="text" class="mono" id="registrationNumber" placeholder="e.g. REG9938217" required>
+                    </div>
+                    <div class="field">
+                        <label for="fees">Application fee (₹)</label>
+                        <input type="number" id="fees" min="0" step="1" placeholder="e.g. 500" required>
+                    </div>
+                    <div class="field">
+                        <label for="formFile">Application form (PDF)</label>
+                        <label class="file-drop" id="formDrop">
+                            <span id="formDropText">Click to attach PDF</span>
+                            <input type="file" id="formFile" accept="application/pdf">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Admit Card section (shown only in edit mode) -->
+                <div id="admitCardEditSection" style="display:none; margin-top: 16px;">
+                    <div class="edit-field-group">
+                        <div class="field-label">📋 Admit Card (replaceable during edit)</div>
+                        <div class="field">
+                            <label for="admitFileEdit">Upload new admit card (PDF)</label>
+                            <label class="file-drop" id="admitDropEdit">
+                                <span id="admitDropTextEdit">Click to attach new PDF</span>
+                                <input type="file" id="admitFileEdit" accept="application/pdf">
+                            </label>
+                            <div style="font-size:11px; color:var(--ink-soft); margin-top:4px;">
+                                Current: <span id="currentAdmitFileName">None</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-cancel" id="cancelEditBtn" style="display:none;">Cancel</button>
+                    <button type="reset" class="btn btn-ghost">Clear</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">Save application</button>
+                </div>
+            </form>
+        </section>
+
+        <div class="toolbar">
+            <input type="text" id="searchInput" placeholder="Search by exam name…">
+            <select id="monthFilter">
+                <option value="">All months</option>
+            </select>
+            <select id="yearFilter">
+                <option value="">All years</option>
+            </select>
+            <span class="count" id="resultCount"></span>
+        </div>
+
+        <div class="ticket-list" id="ticketList"></div>
+    </main>
+
+    <dialog id="toast"></dialog>
+
+    <script>
+        (function() {
+            const STORAGE_KEY = 'examApplications_v1';
+            const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+                "November", "December"
+            ];
+
+            let exams = loadExams();
+            let editingId = null;
+            let pendingAdmitFile = null;
+
+            // ---------- storage ----------
+            function loadExams() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    return raw ? JSON.parse(raw) : [];
+                } catch (e) {
+                    console.error('Failed to load saved data', e);
+                    return [];
+                }
+            }
+
+            function saveExams() {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(exams));
+                } catch (e) {
+                    showToast("Storage is full — try removing a large PDF attachment.");
+                    console.error(e);
+                }
+            }
+
+            // ---------- toast ----------
+            const toastEl = document.getElementById('toast');
+            let toastTimer;
+
+            function showToast(msg) {
+                toastEl.textContent = msg;
+                if (typeof toastEl.show === 'function' && !toastEl.open) toastEl.show();
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => { try { toastEl.close(); } catch (e) {} }, 2400);
+            }
+
+            // ---------- file -> base64 ----------
+            function fileToDataURL(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            // ---------- form: application form file ----------
+            const formFileInput = document.getElementById('formFile');
+            const formDrop = document.getElementById('formDrop');
+            const formDropText = document.getElementById('formDropText');
+            let pendingFormFile = null;
+
+            formFileInput.addEventListener('change', () => {
+                const f = formFileInput.files[0];
+                if (f) {
+                    pendingFormFile = f;
+                    formDropText.textContent = f.name;
+                    formDrop.classList.add('has-file');
+                }
+            });
+
+            function resetFormFile() {
+                pendingFormFile = null;
+                formDropText.textContent = 'Click to attach PDF';
+                formDrop.classList.remove('has-file');
+                formFileInput.value = '';
+            }
+
+            // ---------- admit card file for edit ----------
+            const admitFileEdit = document.getElementById('admitFileEdit');
+            const admitDropEdit = document.getElementById('admitDropEdit');
+            const admitDropTextEdit = document.getElementById('admitDropTextEdit');
+            const currentAdmitFileName = document.getElementById('currentAdmitFileName');
+
+            admitFileEdit.addEventListener('change', () => {
+                const f = admitFileEdit.files[0];
+                if (f) {
+                    if (f.type !== 'application/pdf') {
+                        showToast('Admit card must be a PDF.');
+                        admitFileEdit.value = '';
+                        return;
+                    }
+                    pendingAdmitFile = f;
+                    admitDropTextEdit.textContent = f.name;
+                    admitDropEdit.classList.add('has-file');
+                }
+            });
+
+            function resetAdmitFile() {
+                pendingAdmitFile = null;
+                admitDropTextEdit.textContent = 'Click to attach new PDF';
+                admitDropEdit.classList.remove('has-file');
+                admitFileEdit.value = '';
+            }
+
+            // ---------- add/edit exam ----------
+            const form = document.getElementById('examForm');
+            const formTitle = document.getElementById('formTitle');
+            const formHint = document.getElementById('formHint');
+            const submitBtn = document.getElementById('submitBtn');
+            const cancelEditBtn = document.getElementById('cancelEditBtn');
+            const editIdInput = document.getElementById('editId');
+            const admitCardEditSection = document.getElementById('admitCardEditSection');
+
+            form.addEventListener('reset', () => {
+                resetFormFile();
+                resetAdmitFile();
+                cancelEdit();
+            });
+
+            cancelEditBtn.addEventListener('click', cancelEdit);
+
+            function cancelEdit() {
+                editingId = null;
+                editIdInput.value = '';
+                formTitle.textContent = 'Log a new application';
+                formHint.textContent = 'Fill this in right after you apply — attach the filled application form so it\'s never lost.';
+                submitBtn.textContent = 'Save application';
+                cancelEditBtn.style.display = 'none';
+                admitCardEditSection.style.display = 'none';
+                resetAdmitFile();
+                form.reset();
+                resetFormFile();
+                document.querySelectorAll('.ticket.editing').forEach(el => el.classList.remove('editing'));
+                render();
+            }
+
+            function startEdit(examId) {
+                const exam = exams.find(e => e.id === examId);
+                if (!exam) return;
+
+                editingId = examId;
+                editIdInput.value = examId;
+                formTitle.textContent = 'Edit application';
+                formHint.textContent = 'Update the details below. You can also replace the admit card.';
+                submitBtn.textContent = 'Update application';
+                cancelEditBtn.style.display = 'inline-block';
+                admitCardEditSection.style.display = 'block';
+
+                document.getElementById('examName').value = exam.name;
+                document.getElementById('applicationDate').value = exam.applicationDate;
+                document.getElementById('applicationId').value = exam.applicationId;
+                document.getElementById('registrationNumber').value = exam.registrationNumber;
+                document.getElementById('fees').value = exam.fees;
+
+                // Show existing form file if any
+                if (exam.formFileData) {
+                    formDropText.textContent = exam.formFileName || 'Application form attached';
+                    formDrop.classList.add('has-file');
+                } else {
+                    resetFormFile();
+                }
+
+                // Show current admit card
+                if (exam.admitFileData) {
+                    currentAdmitFileName.textContent = exam.admitFileName || 'Admit card attached';
+                    currentAdmitFileName.style.color = 'var(--seal-green)';
+                } else {
+                    currentAdmitFileName.textContent = 'No admit card uploaded';
+                    currentAdmitFileName.style.color = 'var(--ink-soft)';
+                }
+                resetAdmitFile();
+
+                // Scroll to form
+                document.getElementById('formPanel').scrollIntoView({ behavior: 'smooth' });
+
+                // Highlight the ticket being edited
+                document.querySelectorAll('.ticket').forEach(el => el.classList.remove('editing'));
+                const ticketEl = document.querySelector(`.ticket[data-id="${examId}"]`);
+                if (ticketEl) ticketEl.classList.add('editing');
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const name = document.getElementById('examName').value.trim();
+                const applicationDate = document.getElementById('applicationDate').value;
+                const applicationId = document.getElementById('applicationId').value.trim();
+                const registrationNumber = document.getElementById('registrationNumber').value.trim();
+                const fees = parseFloat(document.getElementById('fees').value) || 0;
+
+                let formFileData = null;
+                let formFileName = null;
+                if (pendingFormFile) {
+                    if (pendingFormFile.type !== 'application/pdf') {
+                        showToast('Application form must be a PDF.');
+                        return;
+                    }
+                    formFileData = await fileToDataURL(pendingFormFile);
+                    formFileName = pendingFormFile.name;
+                }
+
+                const editId = editIdInput.value;
+
+                if (editId) {
+                    // Editing existing exam
+                    const index = exams.findIndex(e => e.id === editId);
+                    if (index === -1) {
+                        showToast('Exam not found.');
+                        return;
+                    }
+                    const existing = exams[index];
+
+                    // Handle admit card replacement
+                    let admitFileData = existing.admitFileData;
+                    let admitFileName = existing.admitFileName;
+                    if (pendingAdmitFile) {
+                        admitFileData = await fileToDataURL(pendingAdmitFile);
+                        admitFileName = pendingAdmitFile.name;
+                    }
+
+                    exams[index] = {
+                        ...existing,
+                        name,
+                        applicationDate,
+                        applicationId,
+                        registrationNumber,
+                        fees,
+                        formFileData: formFileData || existing.formFileData,
+                        formFileName: formFileName || existing.formFileName,
+                        admitFileData: admitFileData,
+                        admitFileName: admitFileName,
+                        // Keep admitPublished true if admit card exists, otherwise false
+                        admitPublished: admitFileData ? true : existing.admitPublished
+                    };
+                    saveExams();
+                    populateFilters();
+                    render();
+                    showToast('Application updated.');
+                    cancelEdit();
+                } else {
+                    // Adding new exam
+                    const exam = {
+                        id: 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+                        name,
+                        applicationDate,
+                        applicationId,
+                        registrationNumber,
+                        fees,
+                        formFileData,
+                        formFileName,
+                        admitPublished: false,
+                        admitFileData: null,
+                        admitFileName: null,
+                        createdAt: Date.now()
+                    };
+
+                    exams.unshift(exam);
+                    saveExams();
+                    populateFilters();
+                    render();
+                    form.reset();
+                    resetFormFile();
+                    showToast('Application saved.');
+                }
+            });
+
+            // ---------- filters ----------
+            const searchInput = document.getElementById('searchInput');
+            const monthFilter = document.getElementById('monthFilter');
+            const yearFilter = document.getElementById('yearFilter');
+
+            searchInput.addEventListener('input', render);
+            monthFilter.addEventListener('change', render);
+            yearFilter.addEventListener('change', render);
+
+            function populateFilters() {
+                const years = new Set();
+                exams.forEach(ex => {
+                    if (ex.applicationDate) {
+                        years.add(ex.applicationDate.slice(0, 4));
+                    }
+                });
+                const sortedYears = Array.from(years).sort((a, b) => b - a);
+
+                const currentYearVal = yearFilter.value;
+                yearFilter.innerHTML = '<option value="">All years</option>' +
+                    sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
+                if (sortedYears.includes(currentYearVal)) yearFilter.value = currentYearVal;
+
+                if (monthFilter.options.length <= 1) {
+                    monthFilter.innerHTML = '<option value="">All months</option>' +
+                        MONTHS.map((m, i) => `<option value="${String(i + 1).padStart(2, '0')}">${m}</option>`).join('');
+                }
+            }
+
+            function formatDate(iso) {
+                if (!iso) return '—';
+                const d = new Date(iso + 'T00:00:00');
+                return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
+
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str || '';
+                return div.innerHTML;
+            }
+
+            // ---------- render ----------
+            const listEl = document.getElementById('ticketList');
+            const resultCount = document.getElementById('resultCount');
+
+            function getFiltered() {
+                const q = searchInput.value.trim().toLowerCase();
+                const month = monthFilter.value;
+                const year = yearFilter.value;
+
+                return exams.filter(ex => {
+                    if (q && !ex.name.toLowerCase().includes(q)) return false;
+                    if (month && ex.applicationDate.slice(5, 7) !== month) return false;
+                    if (year && ex.applicationDate.slice(0, 4) !== year) return false;
+                    return true;
+                });
+            }
+
+            function render() {
+                const filtered = getFiltered();
+                resultCount.textContent = `${filtered.length} of ${exams.length} shown`;
+
+                const total = exams.reduce((sum, ex) => sum + (Number(ex.fees) || 0), 0);
+                document.getElementById('totalSpent').textContent = total.toLocaleString('en-IN');
+                document.getElementById('totalCount').textContent = `${exams.length} exam${exams.length === 1 ? '' : 's'}`;
+
+                if (filtered.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <div class="seal">∅</div>
+                            <div>${exams.length === 0 ? 'No applications logged yet — add your first one above.' : 'No applications match your search or filters.'}</div>
+                        </div>`;
+                    return;
+                }
+
+                listEl.innerHTML = filtered.map(ex => ticketTemplate(ex)).join('');
+
+                // wire up per-ticket events
+                filtered.forEach(ex => {
+                    const toggle = document.getElementById('toggle_' + ex.id);
+                    if (toggle) {
+                        toggle.addEventListener('change', () => {
+                            const target = exams.find(x => x.id === ex.id);
+                            target.admitPublished = toggle.checked;
+                            saveExams();
+                            render();
+                        });
+                    }
+                    const delBtn = document.getElementById('del_' + ex.id);
+                    if (delBtn) {
+                        delBtn.addEventListener('click', () => {
+                            if (confirm(`Remove "${ex.name}" from your tracker? This can't be undone.`)) {
+                                exams = exams.filter(x => x.id !== ex.id);
+                                saveExams();
+                                populateFilters();
+                                render();
+                                showToast('Application removed.');
+                            }
+                        });
+                    }
+                    const editBtn = document.getElementById('edit_' + ex.id);
+                    if (editBtn) {
+                        editBtn.addEventListener('click', () => {
+                            startEdit(ex.id);
+                        });
+                    }
+                });
+            }
+
+            function ticketTemplate(ex) {
+                const statusClass = ex.admitPublished ? 'status-admit' : 'status-applied';
+                const statusLabel = ex.admitPublished ? 'Admit released' : 'Applied';
+
+                const hasAdmitFile = ex.admitFileData !== null && ex.admitFileData !== undefined;
+
+                const formChip = ex.formFileData ?
+                    `<a class="file-chip" href="${ex.formFileData}" download="${escapeHtml(ex.formFileName || 'application-form.pdf')}">📄 ${escapeHtml(ex.formFileName || 'Application form')}</a>` :
+                    `<span class="file-chip" style="opacity:.5">📄 No application form attached</span>`;
+
+                let admitChip = '';
+                if (hasAdmitFile) {
+                    admitChip = `<a class="file-chip locked" href="${ex.admitFileData}" download="${escapeHtml(ex.admitFileName || 'admit-card.pdf')}">🔒 🎫 ${escapeHtml(ex.admitFileName || 'Admit card')}</a>`;
+                } else if (ex.admitPublished) {
+                    admitChip = `<span class="file-chip" style="opacity:.5">🎫 No admit card uploaded yet</span>`;
+                }
+
+                // Admit card upload section - only shown if published, and if not already uploaded
+                let admitSection = '';
+                if (ex.admitPublished) {
+                    if (!hasAdmitFile) {
+                        admitSection = `
+                            <div class="admit-upload">
+                                <label class="file-drop" style="min-width:150px;">
+                                    <span>Upload admit card PDF</span>
+                                    <input type="file" id="admitFile_${ex.id}" accept="application/pdf">
+                                </label>
+                                <span class="admit-replace-hint">(Can be replaced via Edit)</span>
+                            </div>`;
+                    } else {
+                        admitSection = `
+                            <span class="admit-locked">🔒 Admit card uploaded</span>
+                            ${admitChip}
+                            <span class="admit-replace-hint">(Replace via Edit)</span>`;
+                    }
+                } else {
+                    admitSection = `<span class="locked-note">Admit card upload unlocks once you mark it as published.</span>`;
+                }
+
+                // Only disable toggle if we're not in edit mode - but we allow toggling off if no admit card
+                const isToggleDisabled = hasAdmitFile;
+
+                return `
+                    <article class="ticket" data-id="${ex.id}">
+                        <div class="ticket-main">
+                            <div class="ticket-top">
+                                <h3>${escapeHtml(ex.name)}</h3>
+                                <span class="status-badge ${statusClass}">${statusLabel}</span>
+                            </div>
+                            <div class="ticket-meta">
+                                <div>
+                                    <div class="m-label">Application date</div>
+                                    <div class="m-value">${formatDate(ex.applicationDate)}</div>
+                                </div>
+                                <div>
+                                    <div class="m-label">Application ID</div>
+                                    <div class="m-value mono">${escapeHtml(ex.applicationId)}</div>
+                                </div>
+                                <div>
+                                    <div class="m-label">Registration no.</div>
+                                    <div class="m-value mono">${escapeHtml(ex.registrationNumber)}</div>
+                                </div>
+                            </div>
+                            <div class="ticket-files">
+                                ${formChip}
+                            </div>
+                        </div>
+                        <div class="ticket-side">
+                            <div class="fee">
+                                <div class="cur mono">₹</div>
+                                <div class="num mono">${(Number(ex.fees) || 0).toLocaleString('en-IN')}</div>
+                            </div>
+                            <div class="actions">
+                                <button type="button" class="icon-btn edit" id="edit_${ex.id}">✎ Edit</button>
+                                <button type="button" class="icon-btn remove" id="del_${ex.id}">Remove</button>
+                            </div>
+                        </div>
+                        <div class="admit-strip">
+                            <label class="toggle-row">
+                                <span class="switch">
+                                    <input type="checkbox" id="toggle_${ex.id}" ${ex.admitPublished ? 'checked' : ''} ${isToggleDisabled ? 'disabled' : ''}>
+                                    <span class="slider"></span>
+                                </span>
+                                Admit card published
+                            </label>
+                            ${admitSection}
+                        </div>
+                    </article>`;
+            }
+
+            // ---------- init ----------
+            populateFilters();
+            render();
+        })();
+    </script>
+</body>
+</html>
